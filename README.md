@@ -113,5 +113,3 @@ Output:
 {"level":"info","ts":"2020-08-20T21:51:37.008Z","caller":"controller/controller.go:173","msg":"Started operator workers"}
 ```
 **Note** This ensure that Flagger was able to communicate with the Prometheus Metrics server without any issues. This is very important as Flagger depends on the metrics-server to perform most of its functions. If flagger is unable to communicate with metrics-server rest of the demo would not go as intended.
-
-
