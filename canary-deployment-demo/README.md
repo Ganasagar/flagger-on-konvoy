@@ -45,6 +45,7 @@ kubectl apply -f poinfo-canary-spec.yaml
 ```
 **Note:** This file is the key resource specification. You define all the characteristics of the canary deployment in this file. 
 
+
 ### Automated canary promotion
 
 #### 1. Trigger a canary deployment by updating the container image:
@@ -103,3 +104,51 @@ test        podinfo   Progressing   15       2019-01-16T14:05:07Z
 prod        frontend  Succeeded     0        2019-01-15T16:15:07Z
 prod        backend   Failed        0        2019-01-14T17:05:07Z
 ```
+
+### Automated rollback 
+
+During the canary analysis you can generate HTTP 500 errors and high latency to test if Flagger pauses the rollout. We will leverage the loadtester application to simulate load and errors 
+
+#### 1. Trigger another canary deployment:
+```
+kubectl -n test set image deployment/podinfo \
+podinfod=stefanprodan/podinfo:3.1.2
+```
+
+#### 2. Exec into the load tester pod with:
+```
+kubectl -n test exec -it flagger-loadtester-xx-xx sh
+```
+
+#### 3. Generate HTTP 500 errors:
+```bash
+watch curl http://podinfo-canary:9898/status/500
+```
+#### 4. Generate latency:
+```
+watch curl http://podinfo-canary:9898/delay/1
+```
+When the number of failed checks reaches the canary analysis threshold, the traffic is routed back to the primary, the canary is scaled to zero and the rollout is marked as failed
+```
+kubectl -n test describe canary/podinfo
+
+Status:
+  Canary Weight:         0
+  Failed Checks:         10
+  Phase:                 Failed
+Events:
+  Type     Reason  Age   From     Message
+  ----     ------  ----  ----     -------
+  Normal   Synced  3m    flagger  Starting canary deployment for podinfo.test
+  Normal   Synced  3m    flagger  Advance podinfo.test canary weight 5
+  Normal   Synced  3m    flagger  Advance podinfo.test canary weight 10
+  Normal   Synced  3m    flagger  Advance podinfo.test canary weight 15
+  Normal   Synced  3m    flagger  Halt podinfo.test advancement success rate 69.17% < 99%
+  Normal   Synced  2m    flagger  Halt podinfo.test advancement success rate 61.39% < 99%
+  Normal   Synced  2m    flagger  Halt podinfo.test advancement success rate 55.06% < 99%
+  Normal   Synced  2m    flagger  Halt podinfo.test advancement success rate 47.00% < 99%
+  Normal   Synced  2m    flagger  (combined from similar events): Halt podinfo.test advancement success rate 38.08% < 99%
+  Warning  Synced  1m    flagger  Rolling back podinfo.test failed checks threshold reached 10
+  Warning  Synced  1m    flagger  Canary failed! Scaling down podinfo.test
+```
+
