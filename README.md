@@ -10,66 +10,57 @@ Flagger helps automate the release process for Kubernetes workloads with a custo
 4. Prometheus running as metrics-server in kubeaddons namespace 
 5. Privilege access to the Konvoy cluster 
 
-
+![flagger canary](../images/flagger-overview.png)
 
 ### Install Flagger  
 
-1. #### Add Flagger Helm repository:
-```bash
-helm repo add flagger https://flagger.app
-```
-
-2. #### Install Flagger's Canary CRD:
-```bash
-kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
-```
-
-3. #### Deploy Flagger for Istio: 
+1. #### Modify the `cluster.yaml` file so that flagger is enable by changing it to true from false 
 
 ```bash
-helm upgrade -i flagger flagger/flagger \
---namespace=istio-system \
---set crd.create=false \
---set meshProvider=istio \
---set metricsServer=http://prometheus-kubeaddons-prom-prometheus.kubeaddons:9090
+......
+        - name: flagger
+          enabled: true    <--- change this line to true from the default of false
 ```
-**Note**  Note that Flagger depends on Istio telemetry and Prometheus. When you install Istio with Konvoy the default installation launches using **default profile**. You can also notice that we point Flagger to the prometheus metrics server running in the kubeaddon namespace
 
-
-Output :
+2. #### Install Flagger by using Konvoy  
+```bash
+konvoy deploy addons --yes
 ```
-Release "flagger" does not exist. Installing it now.
-NAME:   flagger
-LAST DEPLOYED: Thu Aug 20 14:51:35 2020
-NAMESPACE: istio-system
-STATUS: DEPLOYED
+This would review all the enabled addons and deploy them as necessary. 
 
-RESOURCES:
-==> v1/Deployment
-NAME     READY  UP-TO-DATE  AVAILABLE  AGE
-flagger  0/1    1           0          0s
-
-==> v1/Pod(related)
-NAME                      READY  STATUS             RESTARTS  AGE
-flagger-58b69886f8-xb69d  0/1    ContainerCreating  0         0s
-
-==> v1/ServiceAccount
-NAME     SECRETS  AGE
-flagger  1        0s
-
-==> v1beta1/ClusterRole
-NAME     AGE
-flagger  0s
-
-==> v1beta1/ClusterRoleBinding
-NAME     AGE
-flagger  0s
-
-
-NOTES:
-Flagger installed
+Output:
 ```
-4. #### Lets ensure that Flagger was deployed successfully without any challenges 
+
+STAGE [Deploying Enabled Addons]
+external-dns                                                           [OK]
+dashboard                                                              [OK]
+reloader                                                               [OK]
+konvoyconfig                                                           [OK]
+opsportal                                                              [OK]
+cert-manager                                                           [OK]
+gatekeeper                                                             [OK]
+defaultstorageclass-protection                                         [OK]
+traefik                                                                [OK]
+awsebscsiprovisioner                                                   [OK]
+istio                                                                  [OK]
+dex                                                                    [OK]
+kube-oidc-proxy                                                        [OK]
+traefik-forward-auth                                                   [OK]
+dex-k8s-authenticator                                                  [OK]
+prometheus                                                             [OK]
+prometheusadapter                                                      [OK]
+velero                                                                 [OK]
+elasticsearch                                                          [OK]
+elasticsearch-curator                                                  [OK]
+fluentbit                                                              [OK]
+elasticsearchexporter                                                  [OK]
+kibana                                                                 [OK]
+kommander                                                              [OK]
+
+Kubernetes cluster and addons deployed successfully!
+```
+
+3. #### Lets ensure that Flagger was deployed successfully without any challenges 
 ```bash
 kubectl get deploy,po -n istio-system
 ```
@@ -96,7 +87,7 @@ pod/kiali-6f9b78cdc6-wtmdl                  1/1     Running     0          3d6h
 ```
 Notice that Flagger, Deployment and Pod running successfully. 
 
-5. #### Review logs for Flagger pod to ensure that there are no errors. 
+4. #### Review logs for Flagger pod to ensure that there are no errors. 
 ```bash
 kubectl logs pod/flagger-58b69886f8-xb69d -n istio-system
 ```
